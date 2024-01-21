@@ -10,6 +10,9 @@ from pyfiglet import figlet_format
 import asyncio
 import webbrowser
 import elevenlabs as elabs
+from flask import Flask, render_template_string
+
+app = Flask(__name__, static_url_path='')
 
 cprint(figlet_format('Story Buddy', font='starwars'), attrs=['bold'])
 
@@ -77,3 +80,66 @@ for i in range(len(pages_json)):
 json_result = json.dumps(pages_json, indent=2)
 
 pages = pages_json
+
+html_template = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Storybook</title>
+<style>
+body {
+text-align: center;
+font-family: Arial, sans-serif;
+}
+img {
+max-width: 60%;
+max-height: 60%;
+}
+.content-box {
+width: 80%;
+margin: 20px auto;
+padding: 10px;
+border: 1px solid #ccc;
+border-radius: 5px;
+}
+</style>
+</head>
+<body>
+<div>
+<img src="{{ page['url'] }}" alt="Page Image">
+</div>
+<div class="content-box">
+<audio controls>
+<source src="{{ page['page_number'] ~ '.mp3' }}" type="audio/mp3">
+Your browser does not support the audio element.
+</audio>
+<p>{{ page['content'] }}</p>
+</div>
+<div>
+{% if page['page_number'] > 1 %}
+<a href="/{{ page['page_number'] - 1 }}">Previous</a>
+{% endif %}
+{% if page['page_number'] < pages|length %}
+<a href="/{{ page['page_number'] + 1 }}">Next</a>
+{% endif %}
+</div>
+</body>
+</html>
+"""
+
+@app.route('/')
+def index():
+    return render_template_string(html_template, page=pages[0], pages=pages)
+
+@app.route('/<int:page_number>')
+def show_page(page_number):
+    if 1 <= page_number <= len(pages):
+        return render_template_string(html_template, page=pages[page_number - 1], pages=pages)
+    else:
+        return "Page not found."
+
+if __name__ == '__main__':
+    webbrowser.open("http://127.0.0.1:5000")
+    app.run(debug=False)
